@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 
-const API = "http://localhost:8000/api/tasks/";
+const API = "http://localhost:8000/api/bucketlist/";
 
-export default function TodoPage() {
-  const [tasks, setTasks] = useState([]);
+export default function BucketListPage() {
+  const [items, setItems] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,12 +18,12 @@ export default function TodoPage() {
         if (!r.ok) throw new Error("failed to load");
         return r.json();
       })
-      .then((data) => setTasks(data))
+      .then((data) => setItems(data))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
-  async function addTask(e) {
+  async function addItem(e) {
     e.preventDefault();
     const text = input.trim();
     if (!text) return;
@@ -35,7 +35,7 @@ export default function TodoPage() {
       });
       if (!res.ok) throw new Error("failed to add");
       const created = await res.json();
-      setTasks([{ ...created, done: created.done ?? false }, ...tasks]);
+      setItems([created, ...items]);
       setInput("");
       setError(null);
     } catch (err) {
@@ -43,9 +43,9 @@ export default function TodoPage() {
     }
   }
 
-  async function toggleTask(item) {
+  async function toggleItem(item) {
     const next = !item.done;
-    setTasks((prev) =>
+    setItems((prev) =>
       prev.map((t) => (t.id === item.id ? { ...t, done: next } : t))
     );
     try {
@@ -56,7 +56,7 @@ export default function TodoPage() {
       });
       if (!res.ok) throw new Error("failed to update");
     } catch (err) {
-      setTasks((prev) =>
+      setItems((prev) =>
         prev.map((t) => (t.id === item.id ? { ...t, done: !next } : t))
       );
       setError(err.message);
@@ -86,7 +86,7 @@ export default function TodoPage() {
         body: JSON.stringify({ text }),
       });
       if (!res.ok) throw new Error("failed to update");
-      setTasks((prev) =>
+      setItems((prev) =>
         prev.map((t) => (t.id === item.id ? { ...t, text } : t))
       );
       cancelEdit();
@@ -95,12 +95,12 @@ export default function TodoPage() {
     }
   }
 
-  async function deleteTask(item) {
+  async function deleteItem(item) {
     if (!confirm(`Delete "${item.text}"?`)) return;
     try {
       const res = await fetch(`${API}${item.id}/`, { method: "DELETE" });
       if (!res.ok && res.status !== 204) throw new Error("failed to delete");
-      setTasks((prev) => prev.filter((t) => t.id !== item.id));
+      setItems((prev) => prev.filter((t) => t.id !== item.id));
     } catch (err) {
       setError(err.message);
     }
@@ -108,13 +108,13 @@ export default function TodoPage() {
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>To Do</h1>
-      <form onSubmit={addTask} style={styles.form}>
+      <h1 style={styles.title}>Bucket List</h1>
+      <form onSubmit={addItem} style={styles.form}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="add a task"
+          placeholder="add a bucket list item"
           style={styles.input}
         />
         <button type="submit" style={styles.addBtn}>Add</button>
@@ -124,12 +124,12 @@ export default function TodoPage() {
         <p style={{ color: "#fff" }}>loading...</p>
       ) : (
         <ul style={styles.list}>
-          {tasks.map((t) => (
+          {items.map((t) => (
             <li key={t.id} style={styles.item}>
               <input
                 type="checkbox"
                 checked={!!t.done}
-                onChange={() => toggleTask(t)}
+                onChange={() => toggleItem(t)}
               />
               {editingId === t.id ? (
                 <input
@@ -163,7 +163,7 @@ export default function TodoPage() {
               ) : (
                 <>
                   <button onClick={() => startEdit(t)} style={styles.iconBtn} title="Edit">✎</button>
-                  <button onClick={() => deleteTask(t)} style={{ ...styles.iconBtn, color: "#f87171" }} title="Delete">🗑</button>
+                  <button onClick={() => deleteItem(t)} style={{ ...styles.iconBtn, color: "#f87171" }} title="Delete">🗑</button>
                 </>
               )}
             </li>
