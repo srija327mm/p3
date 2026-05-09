@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -19,7 +20,24 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <div style={{ display: "flex", flexDirection: "row", minHeight: "100vh" }}>
+          <aside
+            style={{
+              width: "200px",
+              padding: "1rem",
+              borderRight: "1px solid #333",
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.75rem",
+            }}
+          >
+            <Link href="/"><h2>Home</h2></Link>
+            <Link href="/todo"><h2>To Do</h2></Link>
+          </aside>
+          <main style={{ flex: 1, padding: "1rem" }}>{children}</main>
+        </div>
+      </body>
     </html>
   );
 }
