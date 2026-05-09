@@ -1,17 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const API = "http://localhost:8000/api/tasks/";
 
 export default function TodoPage() {
   const [tasks, setTasks] = useState([]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  function addTask(e) {
+  useEffect(() => {
+    fetch(API)
+      .then((r) => {
+        if (!r.ok) throw new Error("failed to load");
+        return r.json();
+      })
+      .then((data) => setTasks(data))
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function addTask(e) {
     e.preventDefault();
     const text = input.trim();
     if (!text) return;
-    setTasks([...tasks, { id: Date.now(), text }]);
-    setInput("");
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) throw new Error("failed to add");
+      const created = await res.json();
+      setTasks([created, ...tasks]);
+      setInput("");
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
@@ -27,13 +54,18 @@ export default function TodoPage() {
         />
         <button type="submit" style={{ padding: "0.5rem 1rem" }}>Add</button>
       </form>
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {tasks.map((t) => (
-          <li key={t.id} style={{ padding: "0.5rem 0", borderBottom: "1px solid #333" }}>
-            {t.text}
-          </li>
-        ))}
-      </ul>
+      {error && <p style={{ color: "tomato" }}>{error}</p>}
+      {loading ? (
+        <p>loading...</p>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {tasks.map((t) => (
+            <li key={t.id} style={{ padding: "0.5rem 0", borderBottom: "1px solid #333" }}>
+              {t.text}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
