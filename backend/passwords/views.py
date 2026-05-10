@@ -4,10 +4,17 @@ from .serializers import PasswordEntrySerializer
 
 
 class PasswordEntryListCreateView(generics.ListCreateAPIView):
-    queryset = PasswordEntry.objects.all()
     serializer_class = PasswordEntrySerializer
+
+    def get_queryset(self):
+        return PasswordEntry.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class PasswordEntryDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = PasswordEntry.objects.all()
     serializer_class = PasswordEntrySerializer
+
+    def get_queryset(self):
+        return PasswordEntry.objects.filter(user=self.request.user)

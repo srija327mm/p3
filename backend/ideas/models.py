@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -9,6 +10,13 @@ class Idea(models.Model):
         ('archived', 'Archived'),
     ]
 
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='ideas',
+        null=True,
+        blank=True,
+    )
     idea = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     image = models.FileField(upload_to='ideas/', blank=True, null=True)

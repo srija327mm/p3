@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -10,6 +11,13 @@ class ResumeApplication(models.Model):
         ('saved', 'Saved'),
     ]
 
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='resume_applications',
+        null=True,
+        blank=True,
+    )
     company_name = models.CharField(max_length=200)
     role = models.CharField(max_length=200)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')

@@ -4,10 +4,17 @@ from .serializers import EnglishEntrySerializer
 
 
 class EnglishEntryListCreateView(generics.ListCreateAPIView):
-    queryset = EnglishEntry.objects.all()
     serializer_class = EnglishEntrySerializer
+
+    def get_queryset(self):
+        return EnglishEntry.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class EnglishEntryDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = EnglishEntry.objects.all()
     serializer_class = EnglishEntrySerializer
+
+    def get_queryset(self):
+        return EnglishEntry.objects.filter(user=self.request.user)

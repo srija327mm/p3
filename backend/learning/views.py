@@ -4,10 +4,17 @@ from .serializers import LearningSerializer
 
 
 class LearningListCreateView(generics.ListCreateAPIView):
-    queryset = Learning.objects.all()
     serializer_class = LearningSerializer
+
+    def get_queryset(self):
+        return Learning.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class LearningDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Learning.objects.all()
     serializer_class = LearningSerializer
+
+    def get_queryset(self):
+        return Learning.objects.filter(user=self.request.user)

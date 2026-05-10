@@ -1,7 +1,15 @@
+from django.conf import settings
 from django.db import models
 
 
 class PasswordEntry(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='password_entries',
+        null=True,
+        blank=True,
+    )
     name = models.CharField(max_length=200)
     password = models.CharField(max_length=500, blank=True, default='')
     mail = models.EmailField(blank=True, default='')

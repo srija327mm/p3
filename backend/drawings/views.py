@@ -4,10 +4,17 @@ from .serializers import DrawingSerializer
 
 
 class DrawingListCreateView(generics.ListCreateAPIView):
-    queryset = Drawing.objects.all()
     serializer_class = DrawingSerializer
+
+    def get_queryset(self):
+        return Drawing.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class DrawingDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Drawing.objects.all()
     serializer_class = DrawingSerializer
+
+    def get_queryset(self):
+        return Drawing.objects.filter(user=self.request.user)

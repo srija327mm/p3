@@ -5,12 +5,19 @@ from .serializers import ResumeApplicationSerializer
 
 
 class ResumeListCreateView(generics.ListCreateAPIView):
-    queryset = ResumeApplication.objects.all()
     serializer_class = ResumeApplicationSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        return ResumeApplication.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class ResumeDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = ResumeApplication.objects.all()
     serializer_class = ResumeApplicationSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        return ResumeApplication.objects.filter(user=self.request.user)

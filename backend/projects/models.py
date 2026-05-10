@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -10,6 +11,13 @@ class Project(models.Model):
         ('archived', 'Archived'),
     ]
 
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='projects',
+        null=True,
+        blank=True,
+    )
     name = models.CharField(max_length=200)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, blank=True, default='')
     tech_stack = models.CharField(max_length=500, blank=True, default='')

@@ -5,12 +5,19 @@ from .serializers import IdeaSerializer
 
 
 class IdeaListCreateView(generics.ListCreateAPIView):
-    queryset = Idea.objects.all()
     serializer_class = IdeaSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        return Idea.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class IdeaDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Idea.objects.all()
     serializer_class = IdeaSerializer
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        return Idea.objects.filter(user=self.request.user)

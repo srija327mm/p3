@@ -4,10 +4,17 @@ from .serializers import BucketItemSerializer
 
 
 class BucketItemListCreateView(generics.ListCreateAPIView):
-    queryset = BucketItem.objects.all()
     serializer_class = BucketItemSerializer
+
+    def get_queryset(self):
+        return BucketItem.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class BucketItemDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = BucketItem.objects.all()
     serializer_class = BucketItemSerializer
+
+    def get_queryset(self):
+        return BucketItem.objects.filter(user=self.request.user)
