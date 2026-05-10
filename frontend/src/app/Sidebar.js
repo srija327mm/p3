@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/resume", label: "Resume", icon: "📄", color: "#0891b2" },
   { href: "/projects", label: "Projects", icon: "🚀", color: "#7c3aed" },
   { href: "/learning", label: "Today's Learning", icon: "📚", color: "#16a34a" },
+  { href: "/english", label: "My English Today", icon: "🗣️", color: "#0ea5e9" },
   { href: "/passwords", label: "Passwords", icon: "🔒", color: "#dc2626" },
   { href: "/drawing", label: "Drawing", icon: "🎨", color: "#ec4899" },
 ];
