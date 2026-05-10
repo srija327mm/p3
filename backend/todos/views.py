@@ -13,7 +13,7 @@ class TaskListCreateView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
-class TaskDetailView(generics.RetrieveUpdateDestroyAPIView):
+class TaskDetailView(generics.RetrieveDestroyAPIView):
     serializer_class = TaskSerializer
 
     def get_queryset(self):

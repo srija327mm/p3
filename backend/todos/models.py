@@ -11,7 +11,6 @@ class Task(models.Model):
         blank=True,
     )
     text = models.CharField(max_length=500)
-    done = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
