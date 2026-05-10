@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import ConfirmDialog from "../ConfirmDialog";
 import { apiFetch } from "../../lib/api";
 
-const API = "http://localhost:8000/api/tasks/";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = `${API_BASE}/api/tasks/`;
 
 export default function TodoPage() {
   const [tasks, setTasks] = useState([]);

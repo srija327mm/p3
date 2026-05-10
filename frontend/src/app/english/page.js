@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import ConfirmDialog from "../ConfirmDialog";
 import { apiFetch } from "../../lib/api";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const API = `${API_BASE}/api/english/`;
 
 function todayISO() {
