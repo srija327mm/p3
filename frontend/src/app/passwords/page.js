@@ -5,34 +5,22 @@ import ConfirmDialog from "../ConfirmDialog";
 import { apiFetch } from "../../lib/api";
 
 const API_BASE = "http://localhost:8000";
-const API = `${API_BASE}/api/resumes/`;
+const API = `${API_BASE}/api/passwords/`;
 
-const STATUS_OPTIONS = [
-  { value: "applied", label: "Applied" },
-  { value: "interviewing", label: "Interviewing" },
-  { value: "offer", label: "Offer" },
-  { value: "rejected", label: "Rejected" },
-  { value: "saved", label: "Saved" },
-];
-
-const STATUS_LABEL = Object.fromEntries(
-  STATUS_OPTIONS.map((s) => [s.value, s.label])
-);
-
-export default function ResumePage() {
+export default function PasswordsPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [revealed, setRevealed] = useState({});
   const [confirmTarget, setConfirmTarget] = useState(null);
 
-  const [companyName, setCompanyName] = useState("");
-  const [role, setRole] = useState("");
-  const [status, setStatus] = useState("applied");
-  const [resume, setResume] = useState(null);
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [mail, setMail] = useState("");
+  const [url, setUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -42,7 +30,7 @@ export default function ResumePage() {
         return r.json();
       })
       .then(setItems)
-      .catch((e) => setError(`Failed to load resumes: ${e.message}`))
+      .catch((e) => setError(`Failed to load: ${e.message}`))
       .finally(() => setLoading(false));
   }, []);
 
@@ -51,19 +39,17 @@ export default function ResumePage() {
     if (!q) return items;
     return items.filter(
       (i) =>
-        i.company_name?.toLowerCase().includes(q) ||
-        i.role?.toLowerCase().includes(q) ||
-        i.description?.toLowerCase().includes(q) ||
-        STATUS_LABEL[i.status]?.toLowerCase().includes(q)
+        i.name?.toLowerCase().includes(q) ||
+        i.mail?.toLowerCase().includes(q) ||
+        i.url?.toLowerCase().includes(q)
     );
   }, [items, search]);
 
   function resetForm() {
-    setCompanyName("");
-    setRole("");
-    setStatus("applied");
-    setResume(null);
-    setDescription("");
+    setName("");
+    setPassword("");
+    setMail("");
+    setUrl("");
     setEditingId(null);
   }
 
@@ -74,11 +60,10 @@ export default function ResumePage() {
 
   function openEditModal(item) {
     setEditingId(item.id);
-    setCompanyName(item.company_name || "");
-    setRole(item.role || "");
-    setStatus(item.status || "applied");
-    setResume(null);
-    setDescription(item.description || "");
+    setName(item.name || "");
+    setPassword(item.password || "");
+    setMail(item.mail || "");
+    setUrl(item.url || "");
     setShowModal(true);
   }
 
@@ -87,21 +72,23 @@ export default function ResumePage() {
     resetForm();
   }
 
-  async function saveResume(e) {
+  async function save(e) {
     e.preventDefault();
-    if (!companyName.trim() || !role.trim()) return;
+    if (!name.trim()) return;
     setSaving(true);
     try {
-      const fd = new FormData();
-      fd.append("company_name", companyName.trim());
-      fd.append("role", role.trim());
-      fd.append("status", status);
-      fd.append("description", description);
-      if (resume) fd.append("resume", resume);
-
-      const url = editingId ? `${API}${editingId}/` : API;
+      const apiUrl = editingId ? `${API}${editingId}/` : API;
       const method = editingId ? "PATCH" : "POST";
-      const res = await apiFetch(url, { method, body: fd });
+      const res = await apiFetch(apiUrl, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          password,
+          mail,
+          url,
+        }),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const saved = await res.json();
       if (editingId) {
@@ -131,46 +118,32 @@ export default function ResumePage() {
     }
   }
 
-  async function updateStatus(item, nextStatus) {
-    const prev = item.status;
-    setItems((list) =>
-      list.map((i) => (i.id === item.id ? { ...i, status: nextStatus } : i))
-    );
+  function toggleReveal(id) {
+    setRevealed((r) => ({ ...r, [id]: !r[id] }));
+  }
+
+  async function copyToClipboard(text) {
     try {
-      const res = await apiFetch(`${API}${item.id}/`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    } catch (err) {
-      setItems((list) =>
-        list.map((i) => (i.id === item.id ? { ...i, status: prev } : i))
-      );
-      setError(`Failed to update: ${err.message}`);
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // ignore
     }
   }
 
-  function fileUrl(f) {
-    if (!f) return null;
-    return f.startsWith("http") ? f : `${API_BASE}${f}`;
-  }
-
-  function fileName(f) {
-    if (!f) return "";
-    const parts = f.split("/");
-    return parts[parts.length - 1];
+  function normalizeHref(u) {
+    if (!u) return "";
+    return /^https?:\/\//i.test(u) ? u : `https://${u}`;
   }
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>Resume</h1>
+      <h1 style={styles.title}>Passwords</h1>
 
       <div style={styles.headerCard}>
         <div style={styles.breadcrumb}>
-          <span style={{ fontWeight: 700 }}>Resume</span>
+          <span style={{ fontWeight: 700 }}>Passwords</span>
           <span style={{ color: "#9ca3af" }}>›</span>
-          <span style={{ fontWeight: 700 }}>Applications</span>
+          <span style={{ fontWeight: 700 }}>Vault</span>
         </div>
         <input
           type="text"
@@ -179,12 +152,8 @@ export default function ResumePage() {
           placeholder="Search..."
           style={styles.search}
         />
-        <button
-          type="button"
-          onClick={openNewModal}
-          style={styles.primaryBtn}
-        >
-          New Resume
+        <button type="button" onClick={openNewModal} style={styles.primaryBtn}>
+          New Entry
         </button>
       </div>
 
@@ -192,11 +161,10 @@ export default function ResumePage() {
 
       <div style={styles.tableCard}>
         <div style={styles.tableHeader}>
-          <div style={styles.col}>Company Name</div>
-          <div style={styles.col}>Role</div>
-          <div style={styles.col}>Status</div>
-          <div style={styles.col}>Resume</div>
-          <div style={styles.col}>Description</div>
+          <div style={styles.col}>Name</div>
+          <div style={styles.col}>Mail</div>
+          <div style={styles.col}>Password</div>
+          <div style={styles.col}>URL</div>
           <div style={styles.col}>Actions</div>
         </div>
 
@@ -204,41 +172,54 @@ export default function ResumePage() {
           <div style={styles.empty}>Loading...</div>
         ) : filtered.length === 0 ? (
           <div style={styles.empty}>
-            No entries yet. Click &quot;New Resume&quot; to add one.
+            No entries yet. Click &quot;New Entry&quot; to add one.
           </div>
         ) : (
           filtered.map((i) => (
             <div key={i.id} style={styles.row}>
-              <div style={styles.col}>{i.company_name}</div>
-              <div style={styles.col}>{i.role}</div>
-              <div style={styles.col}>
-                <select
-                  value={i.status}
-                  onChange={(e) => updateStatus(i, e.target.value)}
-                  style={styles.statusSelect}
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
+              <div style={styles.col}>{i.name}</div>
+              <div style={styles.col}>{i.mail || "—"}</div>
+              <div style={{ ...styles.col, display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                {i.password ? (
+                  <>
+                    <span style={{ fontFamily: "monospace" }}>
+                      {revealed[i.id] ? i.password : "•".repeat(Math.min(i.password.length, 12))}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleReveal(i.id)}
+                      style={styles.iconBtn}
+                      title={revealed[i.id] ? "Hide" : "Show"}
+                    >
+                      {revealed[i.id] ? "🙈" : "👁"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(i.password)}
+                      style={styles.iconBtn}
+                      title="Copy"
+                    >
+                      📋
+                    </button>
+                  </>
+                ) : (
+                  "—"
+                )}
               </div>
               <div style={styles.col}>
-                {i.resume ? (
+                {i.url ? (
                   <a
-                    href={fileUrl(i.resume)}
+                    href={normalizeHref(i.url)}
                     target="_blank"
                     rel="noreferrer"
                     style={{ color: "#60a5fa", textDecoration: "underline" }}
                   >
-                    {fileName(i.resume)}
+                    {i.url}
                   </a>
                 ) : (
                   "—"
                 )}
               </div>
-              <div style={styles.col}>{i.description || "—"}</div>
               <div style={{ ...styles.col, display: "flex", gap: "0.4rem" }}>
                 <button
                   type="button"
@@ -268,60 +249,48 @@ export default function ResumePage() {
           onClick={() => !saving && closeModal()}
         >
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ marginBottom: "1rem" }}>{editingId ? "Edit Resume" : "New Resume"}</h2>
+            <h2 style={{ marginBottom: "1rem" }}>
+              {editingId ? "Edit Entry" : "New Entry"}
+            </h2>
             <form
-              onSubmit={saveResume}
+              onSubmit={save}
               style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
             >
               <label style={styles.label}>
-                Company Name
+                Name <span style={{ color: "#dc2626" }}>*</span>
                 <input
                   type="text"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   required
                   style={styles.input}
                 />
               </label>
               <label style={styles.label}>
-                Role
+                Mail
+                <input
+                  type="email"
+                  value={mail}
+                  onChange={(e) => setMail(e.target.value)}
+                  style={styles.input}
+                />
+              </label>
+              <label style={styles.label}>
+                Password
                 <input
                   type="text"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  required
-                  style={styles.input}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ ...styles.input, fontFamily: "monospace" }}
                 />
               </label>
               <label style={styles.label}>
-                Status
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  style={styles.input}
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label style={styles.label}>
-                Resume (PDF/DOC){editingId ? " (leave empty to keep current)" : ""}
+                URL
                 <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) => setResume(e.target.files?.[0] || null)}
-                  style={{ marginTop: "0.25rem" }}
-                />
-              </label>
-              <label style={styles.label}>
-                Description
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
+                  type="text"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://..."
                   style={styles.input}
                 />
               </label>
@@ -353,7 +322,7 @@ export default function ResumePage() {
       <ConfirmDialog
         open={!!confirmTarget}
         title="Delete entry?"
-        message={confirmTarget ? `Are you sure you want to delete "${confirmTarget.company_name} – ${confirmTarget.role}"?` : ""}
+        message={confirmTarget ? `Are you sure you want to delete "${confirmTarget.name}"?` : ""}
         onConfirm={confirmDelete}
         onCancel={() => setConfirmTarget(null)}
       />
@@ -435,7 +404,7 @@ const styles = {
   },
   tableHeader: {
     display: "grid",
-    gridTemplateColumns: "1.2fr 1fr 1fr 1.2fr 2fr 110px",
+    gridTemplateColumns: "1.2fr 1.5fr 1.6fr 1.5fr 110px",
     background: "#262626",
     padding: "0.9rem 1rem",
     fontWeight: 700,
@@ -443,7 +412,7 @@ const styles = {
   },
   row: {
     display: "grid",
-    gridTemplateColumns: "1.2fr 1fr 1fr 1.2fr 2fr 110px",
+    gridTemplateColumns: "1.2fr 1.5fr 1.6fr 1.5fr 110px",
     padding: "0.9rem 1rem",
     borderTop: "1px solid #333",
     alignItems: "center",
@@ -459,12 +428,14 @@ const styles = {
     textAlign: "center",
     color: "#9ca3af",
   },
-  statusSelect: {
-    padding: "0.4rem 0.5rem",
-    borderRadius: 6,
+  iconBtn: {
+    background: "transparent",
     border: "1px solid #3a3a3a",
-    background: "#2a2a2a",
-    color: "#fff",
+    color: "#d1d5db",
+    cursor: "pointer",
+    fontSize: "1rem",
+    padding: "0.3rem 0.55rem",
+    borderRadius: 4,
   },
   modalBackdrop: {
     position: "fixed",
@@ -499,14 +470,6 @@ const styles = {
     fontFamily: "inherit",
     background: "#2a2a2a",
     color: "#fff",
-  },
-  iconBtn: {
-    background: "transparent",
-    border: "1px solid #3a3a3a",
-    color: "#d1d5db",
-    cursor: "pointer",
-    fontSize: "1rem",
-    padding: "0.3rem 0.55rem",
-    borderRadius: 4,
+    outline: "none",
   },
 };

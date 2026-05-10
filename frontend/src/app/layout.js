@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "./AuthContext";
+import AppShell from "./AppShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,57 +22,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
-        <div style={{ display: "flex", flexDirection: "row", minHeight: "100vh" }}>
-          <aside
-            style={{
-              width: "200px",
-              padding: "1rem",
-              borderRight: "1px solid #333",
-              backgroundColor: "#90ee90",
-              color: "#000",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-            }}
-          >
-            <Link href="/"><h2>Home</h2></Link>
-            <Link href="/todo"><h2>To Do</h2></Link>
-            <Link href="/bucketlist"><h2>Bucket List</h2></Link>
-            <Link href="/ideas"><h2>Ideas</h2></Link>
-            <Link href="/resume"><h2>Resume</h2></Link>
-            <Link href="/projects"><h2>Projects</h2></Link>
-          </aside>
-          <main style={{ flex: 1, padding: "1rem", position: "relative" }}>
-            <div
-              style={{
-                position: "absolute",
-                top: "0.75rem",
-                right: "1.25rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.6rem",
-                zIndex: 10,
-                color: "#fff",
-                fontSize: "0.9rem",
-              }}
-            >
-              <a
-                href="mailto:srijareddy327m@gmail.com"
-                style={{ color: "#fff", textDecoration: "none" }}
-              >
-                quries: srijareddy327m@gmail.com
-              </a>
-              <span
-                style={{ fontSize: "1.75rem", lineHeight: 1 }}
-                aria-label="India"
-                title="India"
-              >
-                🇮🇳
-              </span>
-            </div>
-            {children}
-          </main>
-        </div>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );

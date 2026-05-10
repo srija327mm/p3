@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import ConfirmDialog from "../ConfirmDialog";
+import { apiFetch } from "../../lib/api";
 
 const API_BASE = "http://localhost:8000";
 const API = `${API_BASE}/api/ideas/`;
@@ -23,6 +25,7 @@ export default function IdeasPage() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [confirmTarget, setConfirmTarget] = useState(null);
 
   const [idea, setIdea] = useState("");
   const [description, setDescription] = useState("");
@@ -31,7 +34,7 @@ export default function IdeasPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch(API)
+    apiFetch(API)
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -92,7 +95,7 @@ export default function IdeasPage() {
 
       const url = editingId ? `${API}${editingId}/` : API;
       const method = editingId ? "PATCH" : "POST";
-      const res = await fetch(url, { method, body: fd });
+      const res = await apiFetch(url, { method, body: fd });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const saved = await res.json();
       if (editingId) {
@@ -109,10 +112,12 @@ export default function IdeasPage() {
     }
   }
 
-  async function deleteIdea(item) {
-    if (!confirm(`Delete "${item.idea}"?`)) return;
+  async function confirmDelete() {
+    const item = confirmTarget;
+    setConfirmTarget(null);
+    if (!item) return;
     try {
-      const res = await fetch(`${API}${item.id}/`, { method: "DELETE" });
+      const res = await apiFetch(`${API}${item.id}/`, { method: "DELETE" });
       if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
       setIdeas((list) => list.filter((i) => i.id !== item.id));
     } catch (err) {
@@ -126,7 +131,7 @@ export default function IdeasPage() {
       list.map((i) => (i.id === item.id ? { ...i, status: nextStatus } : i))
     );
     try {
-      const res = await fetch(`${API}${item.id}/`, {
+      const res = await apiFetch(`${API}${item.id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: nextStatus }),
@@ -228,7 +233,7 @@ export default function IdeasPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => deleteIdea(i)}
+                  onClick={() => setConfirmTarget(i)}
                   style={{ ...styles.iconBtn, color: "#f87171" }}
                   title="Delete"
                 >
@@ -310,13 +315,21 @@ export default function IdeasPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmTarget}
+        title="Delete idea?"
+        message={confirmTarget ? `Are you sure you want to delete "${confirmTarget.idea}"?` : ""}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmTarget(null)}
+      />
     </div>
   );
 }
 
 const styles = {
   page: {
-    background: "#000",
+    background: "transparent",
     minHeight: "100%",
     padding: "1.5rem",
     color: "#fff",

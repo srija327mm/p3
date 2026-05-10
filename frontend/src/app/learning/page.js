@@ -5,22 +5,9 @@ import ConfirmDialog from "../ConfirmDialog";
 import { apiFetch } from "../../lib/api";
 
 const API_BASE = "http://localhost:8000";
-const API = `${API_BASE}/api/projects/`;
+const API = `${API_BASE}/api/learning/`;
 
-const STATUS_OPTIONS = [
-  { value: "", label: "--None--" },
-  { value: "planning", label: "Planning" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
-  { value: "on_hold", label: "On Hold" },
-  { value: "archived", label: "Archived" },
-];
-
-const STATUS_LABEL = Object.fromEntries(
-  STATUS_OPTIONS.map((s) => [s.value, s.label])
-);
-
-export default function ProjectsPage() {
+export default function LearningPage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,7 +23,7 @@ export default function ProjectsPage() {
         return r.json();
       })
       .then(setItems)
-      .catch((e) => setError(`Failed to load projects: ${e.message}`))
+      .catch((e) => setError(`Failed to load entries: ${e.message}`))
       .finally(() => setLoading(false));
   }, []);
 
@@ -45,40 +32,10 @@ export default function ProjectsPage() {
     if (!q) return items;
     return items.filter(
       (i) =>
-        i.name?.toLowerCase().includes(q) ||
-        i.tech_stack?.toLowerCase().includes(q) ||
-        STATUS_LABEL[i.status]?.toLowerCase().includes(q)
+        i.topic?.toLowerCase().includes(q) ||
+        stripHtml(i.description).toLowerCase().includes(q)
     );
   }, [items, search]);
-
-  async function updateStatus(item, nextStatus) {
-    const prev = item.status;
-    setItems((list) =>
-      list.map((i) => (i.id === item.id ? { ...i, status: nextStatus } : i))
-    );
-    try {
-      const res = await apiFetch(`${API}${item.id}/`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    } catch (err) {
-      setItems((list) =>
-        list.map((i) => (i.id === item.id ? { ...i, status: prev } : i))
-      );
-      setError(`Failed to update: ${err.message}`);
-    }
-  }
-
-  function handleSaved(project, wasEdit) {
-    if (wasEdit) {
-      setItems((list) => list.map((i) => (i.id === project.id ? project : i)));
-    } else {
-      setItems([project, ...items]);
-    }
-    closeModal();
-  }
 
   function openNewModal() {
     setEditingItem(null);
@@ -93,6 +50,15 @@ export default function ProjectsPage() {
   function closeModal() {
     setShowModal(false);
     setEditingItem(null);
+  }
+
+  function handleSaved(saved, wasEdit) {
+    if (wasEdit) {
+      setItems((list) => list.map((i) => (i.id === saved.id ? saved : i)));
+    } else {
+      setItems([saved, ...items]);
+    }
+    closeModal();
   }
 
   async function confirmDelete() {
@@ -110,13 +76,13 @@ export default function ProjectsPage() {
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.title}>Projects</h1>
+      <h1 style={styles.title}>Today&apos;s Learning</h1>
 
       <div style={styles.headerCard}>
         <div style={styles.breadcrumb}>
-          <span style={{ fontWeight: 700 }}>Projects</span>
+          <span style={{ fontWeight: 700 }}>Today&apos;s Learning</span>
           <span style={{ color: "#9ca3af" }}>›</span>
-          <span style={{ fontWeight: 700 }}>All Projects</span>
+          <span style={{ fontWeight: 700 }}>Entries</span>
         </div>
         <input
           type="text"
@@ -125,12 +91,8 @@ export default function ProjectsPage() {
           placeholder="Search..."
           style={styles.search}
         />
-        <button
-          type="button"
-          onClick={openNewModal}
-          style={styles.primaryBtn}
-        >
-          New Project
+        <button type="button" onClick={openNewModal} style={styles.primaryBtn}>
+          New Entry
         </button>
       </div>
 
@@ -138,10 +100,9 @@ export default function ProjectsPage() {
 
       <div style={styles.tableCard}>
         <div style={styles.tableHeader}>
-          <div style={styles.col}>Project Name</div>
-          <div style={styles.col}>Status</div>
-          <div style={styles.col}>Tech Stack</div>
-          <div style={styles.col}>Notes</div>
+          <div style={styles.col}>Topic</div>
+          <div style={styles.col}>Description</div>
+          <div style={styles.col}>Date</div>
           <div style={styles.col}>Actions</div>
         </div>
 
@@ -149,32 +110,19 @@ export default function ProjectsPage() {
           <div style={styles.empty}>Loading...</div>
         ) : filtered.length === 0 ? (
           <div style={styles.empty}>
-            No projects yet. Click &quot;New Project&quot; to add one.
+            No entries yet. Click &quot;New Entry&quot; to add one.
           </div>
         ) : (
           filtered.map((i) => (
             <div key={i.id} style={styles.row}>
-              <div style={styles.col}>{i.name}</div>
-              <div style={styles.col}>
-                <select
-                  value={i.status || ""}
-                  onChange={(e) => updateStatus(i, e.target.value)}
-                  style={styles.statusSelect}
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={styles.col}>{i.tech_stack || "—"}</div>
+              <div style={styles.col}>{i.topic}</div>
               <div
                 style={{ ...styles.col, ...styles.notesPreview }}
                 dangerouslySetInnerHTML={{
-                  __html: i.notes || "<span style='color:#9ca3af'>—</span>",
+                  __html: i.description || "<span style='color:#9ca3af'>—</span>",
                 }}
               />
+              <div style={styles.col}>{formatDate(i.created_at)}</div>
               <div style={{ ...styles.col, display: "flex", gap: "0.4rem" }}>
                 <button
                   type="button"
@@ -199,7 +147,7 @@ export default function ProjectsPage() {
       </div>
 
       {showModal && (
-        <ProjectModal
+        <LearningModal
           editing={editingItem}
           onClose={closeModal}
           onSaved={handleSaved}
@@ -209,8 +157,8 @@ export default function ProjectsPage() {
 
       <ConfirmDialog
         open={!!confirmTarget}
-        title="Delete project?"
-        message={confirmTarget ? `Are you sure you want to delete "${confirmTarget.name}"?` : ""}
+        title="Delete entry?"
+        message={confirmTarget ? `Are you sure you want to delete "${confirmTarget.topic}"?` : ""}
         onConfirm={confirmDelete}
         onCancel={() => setConfirmTarget(null)}
       />
@@ -218,23 +166,29 @@ export default function ProjectsPage() {
   );
 }
 
-function ProjectModal({ editing, onClose, onSaved, onError }) {
+function LearningModal({ editing, onClose, onSaved, onError }) {
   const isEdit = !!editing;
-  const [name, setName] = useState(editing?.name || "");
-  const [status, setStatus] = useState(editing?.status || "");
-  const [techStack, setTechStack] = useState(editing?.tech_stack || "");
+  const [topic, setTopic] = useState(editing?.topic || "");
   const [saving, setSaving] = useState(false);
   const editorRef = useRef(null);
 
   useLayoutEffect(() => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = editing?.notes || "";
+      editorRef.current.innerHTML = editing?.description || "";
     }
   }, [editing]);
 
   function exec(cmd, value = null) {
     document.execCommand(cmd, false, value);
     editorRef.current?.focus();
+  }
+
+  function escapeHtml(s) {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   function wrapInline(tag) {
@@ -248,14 +202,6 @@ function ProjectModal({ editing, onClose, onSaved, onError }) {
       document.execCommand("insertHTML", false, `<${tag}>${escapeHtml(text)}</${tag}>`);
     }
     editorRef.current?.focus();
-  }
-
-  function escapeHtml(s) {
-    return s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   }
 
   function readAsDataUrl(file) {
@@ -285,42 +231,18 @@ function ProjectModal({ editing, onClose, onSaved, onError }) {
     input.click();
   }
 
-  async function pickAndInsertPdf() {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/pdf";
-    input.onchange = async () => {
-      const f = input.files?.[0];
-      if (!f) return;
-      const url = await readAsDataUrl(f);
-      editorRef.current?.focus();
-      const safeName = escapeHtml(f.name);
-      document.execCommand(
-        "insertHTML",
-        false,
-        `<a href="${url}" download="${safeName}" target="_blank" rel="noreferrer" style="color:#2563eb;text-decoration:underline">📎 ${safeName}</a>&nbsp;`
-      );
-    };
-    input.click();
-  }
-
   async function save(e) {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!topic.trim()) return;
     setSaving(true);
-    const notesHtml = editorRef.current?.innerHTML || "";
+    const description = editorRef.current?.innerHTML || "";
     try {
       const url = isEdit ? `${API}${editing.id}/` : API;
       const method = isEdit ? "PATCH" : "POST";
       const res = await apiFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          status,
-          tech_stack: techStack,
-          notes: notesHtml,
-        }),
+        body: JSON.stringify({ topic: topic.trim(), description }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const saved = await res.json();
@@ -349,12 +271,14 @@ function ProjectModal({ editing, onClose, onSaved, onError }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div style={styles.modalHeader}>
-          <h2 style={{ flex: 1, textAlign: "center" }}>{isEdit ? "Edit Project" : "New Project"}</h2>
+          <h2 style={{ flex: 1, textAlign: "center" }}>
+            {isEdit ? "Edit Entry" : "New Entry"}
+          </h2>
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            style={{ ...toolbarBtn, fontSize: "1.25rem", color: "#6b7280" }}
+            style={{ ...toolbarBtn, fontSize: "1.25rem" }}
             aria-label="Close"
           >
             ×
@@ -362,52 +286,24 @@ function ProjectModal({ editing, onClose, onSaved, onError }) {
         </div>
 
         <form onSubmit={save} style={{ padding: "1rem 1.25rem 1.25rem" }}>
-          <div style={styles.sectionHeader}>Basic Information</div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-            <label style={styles.label}>
-              Project Name <span style={{ color: "#dc2626" }}>*</span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                style={styles.input}
-              />
-            </label>
-            <label style={styles.label}>
-              Status
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                style={styles.input}
-              >
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
           <label style={{ ...styles.label, marginBottom: "1rem" }}>
-            Tech Stack
+            Topic <span style={{ color: "#dc2626" }}>*</span>
             <input
               type="text"
-              value={techStack}
-              onChange={(e) => setTechStack(e.target.value)}
-              placeholder="e.g. Next.js, Django, Postgres"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              required
               style={styles.input}
             />
           </label>
 
-          <div style={styles.sectionHeader}>Notes</div>
+          <div style={styles.sectionHeader}>Description</div>
 
           <div style={styles.editorWrap}>
             <div style={styles.toolbar}>
               <button type="button" style={{ ...toolbarBtn, fontWeight: 700 }} onClick={() => exec("bold")} title="Bold">B</button>
               <button type="button" style={{ ...toolbarBtn, fontStyle: "italic" }} onClick={() => exec("italic")} title="Italic">I</button>
+              <button type="button" style={{ ...toolbarBtn, textDecoration: "underline" }} onClick={() => exec("underline")} title="Underline">U</button>
               <button type="button" style={{ ...toolbarBtn, textDecoration: "line-through" }} onClick={() => exec("strikeThrough")} title="Strikethrough">S</button>
               <span style={styles.toolbarSep} />
               <button type="button" style={toolbarBtn} onClick={() => exec("formatBlock", "<h1>")} title="Heading 1">H1</button>
@@ -420,7 +316,6 @@ function ProjectModal({ editing, onClose, onSaved, onError }) {
               <button type="button" style={toolbarBtn} onClick={() => wrapInline("code")} title="Code">&lt;/&gt;</button>
               <span style={styles.toolbarSep} />
               <button type="button" style={toolbarBtn} onClick={pickAndInsertImage} title="Insert image">🖼</button>
-              <button type="button" style={toolbarBtn} onClick={pickAndInsertPdf} title="Attach PDF">📎</button>
               <span style={styles.toolbarSep} />
               <button type="button" style={toolbarBtn} onClick={() => exec("undo")} title="Undo">↶</button>
               <button type="button" style={toolbarBtn} onClick={() => exec("redo")} title="Redo">↷</button>
@@ -459,6 +354,18 @@ function ProjectModal({ editing, onClose, onSaved, onError }) {
       </div>
     </div>
   );
+}
+
+function stripHtml(html) {
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, " ");
+}
+
+function formatDate(s) {
+  if (!s) return "—";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString();
 }
 
 const styles = {
@@ -535,7 +442,7 @@ const styles = {
   },
   tableHeader: {
     display: "grid",
-    gridTemplateColumns: "1.4fr 1fr 1.2fr 2fr 110px",
+    gridTemplateColumns: "1.4fr 2.5fr 1fr 110px",
     background: "#262626",
     padding: "0.9rem 1rem",
     fontWeight: 700,
@@ -543,7 +450,7 @@ const styles = {
   },
   row: {
     display: "grid",
-    gridTemplateColumns: "1.4fr 1fr 1.2fr 2fr 110px",
+    gridTemplateColumns: "1.4fr 2.5fr 1fr 110px",
     padding: "0.9rem 1rem",
     borderTop: "1px solid #333",
     alignItems: "center",
@@ -565,12 +472,14 @@ const styles = {
     textAlign: "center",
     color: "#9ca3af",
   },
-  statusSelect: {
-    padding: "0.4rem 0.5rem",
-    borderRadius: 6,
+  iconBtn: {
+    background: "transparent",
     border: "1px solid #3a3a3a",
-    background: "#2a2a2a",
-    color: "#fff",
+    color: "#d1d5db",
+    cursor: "pointer",
+    fontSize: "1rem",
+    padding: "0.3rem 0.55rem",
+    borderRadius: 4,
   },
   modalBackdrop: {
     position: "fixed",
@@ -650,14 +559,5 @@ const styles = {
     fontSize: "0.95rem",
     color: "#fff",
     background: "#1a1a1a",
-  },
-  iconBtn: {
-    background: "transparent",
-    border: "1px solid #3a3a3a",
-    color: "#d1d5db",
-    cursor: "pointer",
-    fontSize: "1rem",
-    padding: "0.3rem 0.55rem",
-    borderRadius: 4,
   },
 };

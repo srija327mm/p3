@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import ConfirmDialog from "../ConfirmDialog";
+import { apiFetch } from "../../lib/api";
 
 const API = "http://localhost:8000/api/bucketlist/";
 
@@ -11,9 +13,10 @@ export default function BucketListPage() {
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editingText, setEditingText] = useState("");
+  const [confirmTarget, setConfirmTarget] = useState(null);
 
   useEffect(() => {
-    fetch(API)
+    apiFetch(API)
       .then((r) => {
         if (!r.ok) throw new Error("failed to load");
         return r.json();
@@ -28,7 +31,7 @@ export default function BucketListPage() {
     const text = input.trim();
     if (!text) return;
     try {
-      const res = await fetch(API, {
+      const res = await apiFetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
@@ -49,7 +52,7 @@ export default function BucketListPage() {
       prev.map((t) => (t.id === item.id ? { ...t, done: next } : t))
     );
     try {
-      const res = await fetch(`${API}${item.id}/`, {
+      const res = await apiFetch(`${API}${item.id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: next }),
@@ -80,7 +83,7 @@ export default function BucketListPage() {
       return;
     }
     try {
-      const res = await fetch(`${API}${item.id}/`, {
+      const res = await apiFetch(`${API}${item.id}/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
@@ -95,10 +98,12 @@ export default function BucketListPage() {
     }
   }
 
-  async function deleteItem(item) {
-    if (!confirm(`Delete "${item.text}"?`)) return;
+  async function confirmDelete() {
+    const item = confirmTarget;
+    setConfirmTarget(null);
+    if (!item) return;
     try {
-      const res = await fetch(`${API}${item.id}/`, { method: "DELETE" });
+      const res = await apiFetch(`${API}${item.id}/`, { method: "DELETE" });
       if (!res.ok && res.status !== 204) throw new Error("failed to delete");
       setItems((prev) => prev.filter((t) => t.id !== item.id));
     } catch (err) {
@@ -163,20 +168,28 @@ export default function BucketListPage() {
               ) : (
                 <>
                   <button onClick={() => startEdit(t)} style={styles.iconBtn} title="Edit">✎</button>
-                  <button onClick={() => deleteItem(t)} style={{ ...styles.iconBtn, color: "#f87171" }} title="Delete">🗑</button>
+                  <button onClick={() => setConfirmTarget(t)} style={{ ...styles.iconBtn, color: "#f87171" }} title="Delete">🗑</button>
                 </>
               )}
             </li>
           ))}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={!!confirmTarget}
+        title="Delete item?"
+        message={confirmTarget ? `Are you sure you want to delete "${confirmTarget.text}"?` : ""}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmTarget(null)}
+      />
     </div>
   );
 }
 
 const styles = {
   page: {
-    background: "#000",
+    background: "transparent",
     minHeight: "100%",
     padding: "1.5rem",
     color: "#fff",
